@@ -1,0 +1,17 @@
+[package]
+name = "bfcli"
+version = "0.1.0"
+edition = "2021"
+description = "A simple shell file sourcing manager"
+license = "MIT"
+repository = "https://github.com/gndps/bfcli"
+homepage = "https://github.com/gndps/bfcli"
+
+[[bin]]
+name = "bfcli"
+path = "src/main.rs"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
