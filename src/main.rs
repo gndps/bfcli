@@ -340,6 +340,7 @@ fn main() {
         Some("files") => cmd_files(),
         Some("config") => cmd_config(),
         Some("help") | Some("--help") | Some("-h") => print!("{}", HELP_TEXT),
+        Some("--version") | Some("-V") => println!("bfcli {}", env!("CARGO_PKG_VERSION")),
         Some(unknown) => {
             eprintln!("Unknown command: {}", unknown);
             eprintln!("Run 'bfcli help' for usage.");
