@@ -69,8 +69,9 @@ USAGE:
 SUBCOMMANDS:
     shell         Detect the rc file for your OS/shell and print what would be appended
                   (dry run, does not modify anything)
-    eval          Detect the rc file, check whether the line is already present, and
-                  append it only if missing (idempotent)
+    eval          Detect the rc file, check whether the same path is already referenced
+                  (matching "~", "$HOME"/"${HOME}", or an absolute path against it), and
+                  append the line only if missing (idempotent)
     eval --fast   Same as 'eval' but skips the existing-content check and appends
                   unconditionally (faster, but can create duplicate lines if run twice)
 
@@ -370,13 +371,32 @@ fn cmd_appendrc_shell() {
     println!("{}", line);
 }
 
+/// Expand "~", "$HOME" and "${HOME}" references to the actual home directory,
+/// so path comparisons treat them as equivalent to an absolute path.
+fn expand_home_refs(text: &str, home: &str) -> String {
+    text.replace("${HOME}", home)
+        .replace("$HOME", home)
+        .replace('~', home)
+}
+
+/// True if `existing` already contains a line referencing the same absolute
+/// bflist path as `line`, regardless of whether it was written using "~",
+/// "$HOME", or the fully-resolved absolute path.
+fn rc_already_has_line(existing: &str, home: &str) -> bool {
+    let target = expand_home_refs(&bflist_rc_line(), home);
+    existing
+        .lines()
+        .any(|l| expand_home_refs(l, home).trim() == target)
+}
+
 fn append_rc_line(fast: bool) {
     let rc_path = detect_rc_file();
     let line = bflist_rc_line();
+    let home = env::var("HOME").unwrap_or_default();
 
     if !fast {
         let existing = fs::read_to_string(&rc_path).unwrap_or_default();
-        if existing.lines().any(|l| l.trim() == line) {
+        if rc_already_has_line(&existing, &home) {
             println!("Already present in {}, skipping.", rc_path.display());
             return;
         }
@@ -532,5 +552,40 @@ mod tests {
         let json = r#"{ "extensions": [".bash", ".zsh"] }"#;
         let exts = parse_extensions(json);
         assert_eq!(exts, vec![".bash", ".zsh"]);
+    }
+
+    #[test]
+    fn test_rc_already_has_line_exact_match() {
+        let home = "/Users/me";
+        let existing = "[ -f ~/.bfcli/.bflist ] && source ~/.bfcli/.bflist\n";
+        assert!(rc_already_has_line(existing, home));
+    }
+
+    #[test]
+    fn test_rc_already_has_line_dollar_home() {
+        let home = "/Users/me";
+        let existing = "[ -f $HOME/.bfcli/.bflist ] && source $HOME/.bfcli/.bflist\n";
+        assert!(rc_already_has_line(existing, home));
+    }
+
+    #[test]
+    fn test_rc_already_has_line_braced_dollar_home() {
+        let home = "/Users/me";
+        let existing = "[ -f ${HOME}/.bfcli/.bflist ] && source ${HOME}/.bfcli/.bflist\n";
+        assert!(rc_already_has_line(existing, home));
+    }
+
+    #[test]
+    fn test_rc_already_has_line_absolute_path() {
+        let home = "/Users/me";
+        let existing = "[ -f /Users/me/.bfcli/.bflist ] && source /Users/me/.bfcli/.bflist\n";
+        assert!(rc_already_has_line(existing, home));
+    }
+
+    #[test]
+    fn test_rc_already_has_line_absent() {
+        let home = "/Users/me";
+        let existing = "export PATH=$PATH:/usr/local/bin\n";
+        assert!(!rc_already_has_line(existing, home));
     }
 }

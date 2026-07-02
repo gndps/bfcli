@@ -40,7 +40,7 @@ This detects the right rc file for your shell/OS (`~/.zshrc` for zsh, `~/.bash_p
 [ -f ~/.bfcli/.bflist ] && source ~/.bfcli/.bflist
 ```
 
-It's idempotent — running it again won't add a duplicate line. To just preview the change without writing anything, use `bfcli appendrc shell`.
+It's idempotent — running it again won't add a duplicate line, even if an existing line refers to the same file via `~`, `$HOME`/`${HOME}`, or an absolute path instead of the exact string bfcli writes. To just preview the change without writing anything, use `bfcli appendrc shell`.
 
 ### 3. Place shell files in src_files/
 
