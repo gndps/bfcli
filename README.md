@@ -30,11 +30,17 @@ This creates `~/.bfcli/` with a default `config.json` and an empty `src_files/` 
 
 ### 2. Add to your shell profile
 
-Add this line to `~/.bash_profile` (or `~/.zshrc`):
+```sh
+bfcli appendrc eval
+```
+
+This detects the right rc file for your shell/OS (`~/.zshrc` for zsh, `~/.bash_profile` on macOS bash, `~/.bashrc` on Linux bash) and appends:
 
 ```sh
 [ -f ~/.bfcli/.bflist ] && source ~/.bfcli/.bflist
 ```
+
+It's idempotent — running it again won't add a duplicate line. To just preview the change without writing anything, use `bfcli appendrc shell`.
 
 ### 3. Place shell files in src_files/
 
@@ -69,18 +75,27 @@ bfcli update
 |---------|-------------|
 | `bfcli init` | Create `~/.bfcli/` with default config and empty `src_files/` dir |
 | `bfcli update` | Scan `src_files/`, write `~/.bfcli/.bflist`, print "Updated: N files" |
-| `bfcli source` | Update then print source commands to stdout (for `eval`) |
+| `bfcli source` | Print help for the `source` subcommands (below) |
+| `bfcli source print` | Update `.bflist` and print the sourceable script to stdout, for humans/debugging |
+| `bfcli source shell` | Print the line to add to your shell rc file (no side effects) |
+| `bfcli source eval` | Update `.bflist` and print the sourceable script, meant for `eval "$(bfcli source eval)"` |
+| `bfcli appendrc` | Print help for the `appendrc` subcommands (below) |
+| `bfcli appendrc shell` | Preview which rc file would be modified and what would be appended |
+| `bfcli appendrc eval` | Detect the rc file and append the sourcing line if not already present |
+| `bfcli appendrc eval --fast` | Same, but skips the existing-content check (can duplicate the line if run twice) |
 | `bfcli files` | List all files that will be sourced |
 | `bfcli config` | Open `~/.bfcli/config.json` in `$EDITOR` |
 | `bfcli help` | Print help |
 
 ### eval mode
 
-You can use `bfcli source` in eval mode so changes are picked up without restarting your shell:
+`bfcli source` never modifies your current shell by itself — a subprocess can't reach into its parent shell's environment. To pick up changes without restarting your shell, wrap it in `eval`:
 
 ```sh
-eval "$(bfcli source)"
+eval "$(bfcli source eval)"
 ```
+
+This re-scans `src_files/` on every call, unlike the static `.bflist` file that `bfcli appendrc eval` wires into your rc file.
 
 ## Configuration
 
